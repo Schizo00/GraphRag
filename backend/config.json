@@ -1,0 +1,12 @@
+{
+    "GEMINI_API_KEY" : "AIzaSyA3APiqF3YuZ2sIViHQ38KK-xkp5r7xr_4",
+    "NEO4J_URI" : "neo4j+s://ea23a06c.databases.neo4j.io",
+    "NEO4J_USERNAME" : "neo4j",
+    "NEO4J_PASSWORD" : "BnexNfkm3JKzCt-_7UYtgCKwoIgSrN0fUiOPixK-ynM",
+    "DATA" : "./data",
+    "RATE_LIMITS" : {
+        "RPS" : 0.2,
+        "N_SECS" : 1
+    },
+    "TEMPERATURE" : 0.1
+}
