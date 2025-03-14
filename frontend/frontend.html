@@ -89,7 +89,7 @@
     <div id="chat-container">
         <div id="chat-header">
             <img src="avatar.jpeg" alt="Bot">
-            <span>Samayanthi</span>
+            <span>Virtual Assistant</span>
         </div>
         <div id="chat-messages"></div>
         <div id="chat-input-container">
@@ -127,7 +127,7 @@
 
         function getBotResponse(userMessage) {
             let history = chatHistory.map(([q, a]) => ({ question: q, answer: a }));
-            fetch("http://127.0.0.1:8000/chat", {
+            fetch("http://0.0.0.0:8000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question: userMessage, history: history })
