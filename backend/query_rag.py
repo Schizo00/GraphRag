@@ -101,12 +101,13 @@ def generate_full_text_query(input: str) -> str:
 
     return full_text_query.strip()
 
-async def structured_retriever(question: str, entity_chain, graph) -> str:
+def structured_retriever(question: str, entity_chain, graph) -> str:
     start_time = time.time()
     result = ""
     entities = entity_chain.invoke({"question": question})
-    entity_queries = [generate_full_text_query(entity) for entity in entities.names]
 
+    entity_queries = [generate_full_text_query(entity) for entity in entities.names]
+    
     if entity_queries:
         query = """
         UNWIND $queries AS query
@@ -121,33 +122,48 @@ async def structured_retriever(question: str, entity_chain, graph) -> str:
         }
         RETURN output LIMIT 25
         """
+        
         response = graph.query(query, {"queries": entity_queries})
         result = "\n".join([el['output'] for el in response])
 
     print("OPTIMIZED_STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
     return result
 
-async def async_retriever(question: str, vector_index, entity_chain, graph):
+def async_retriever(question: str, vector_index, entity_chain, graph):
     start_time = time.time()
     # print(f"Search query: {question}")
 
-    structured_task = asyncio.create_task(structured_retriever(question, entity_chain, graph))
-    unstructured_task = asyncio.create_task(asyncio.to_thread(lambda: [el.page_content for el in vector_index.similarity_search(question)]))
 
-    structured_data = await structured_task
-    unstructured_data = await unstructured_task
+    
+
+    # start_time = time.time()
+    # unstructured_task = asyncio.create_task(asyncio.to_thread(lambda: [el.page_content for el in vector_index.similarity_search(question)]))
+    # print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
+    # structured_data, unstructured_data = await asyncio.gather(structured_task, unstructured_task)
+
+    start_time = time.time()
+    structured_data = structured_retriever(question, entity_chain, graph)
+    print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
+
+    # unstructured_data = await unstructured_task
+    start_time = time.time()
+    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
+    print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
+
+    # structured_data = structured_retriever(question, entity_chain, graph)
+    # unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
+
     final_data = f"""
     Structured data:
     {structured_data}
     Unstructured data:
-    {"#Document ". join(unstructured_data)}
+    {"#Document ".join(unstructured_data)}
     """
-    print("OPTIMIZED_FULL_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
     return final_data
 
 def retriever(question: str, vector_index, entity_chain, graph):
-    return asyncio.run(async_retriever(question, vector_index, entity_chain, graph))
-
+    # return asyncio.run(async_retriever(question, vector_index, entity_chain, graph))
+    return async_retriever(question, vector_index, entity_chain, graph)
 
 def get_template():
     _template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question,
@@ -200,16 +216,30 @@ def get_question_template():
 
     return ChatPromptTemplate.from_template(template)
 
+
 def get_query_chain(_search_query, template, llm, vector_index, entity_chain, graph):
+    def timed_runnable(func, name):
+        def wrapper(input):
+            start_time = time.time()
+            result = func(input)
+            end_time = time.time()
+            print(f"{name} took {end_time - start_time:.4f} seconds")
+            return result
+        return wrapper
+
+    retriever_func = lambda q: retriever(q, vector_index, entity_chain, graph)
+
     return (
         {
-            "context": _search_query | RunnableLambda(lambda q: retriever(q, vector_index, entity_chain, graph)),
+            "context": _search_query | RunnableLambda(timed_runnable(retriever_func, "Retriever")),
             "question": RunnablePassthrough()
         }
-        | template
-        | llm
-        | StrOutputParser()
+        | RunnableLambda(timed_runnable(template.invoke, "Template"))
+        | RunnableLambda(timed_runnable(llm.invoke, "LLM"))
+        | RunnableLambda(timed_runnable(StrOutputParser().parse, "Output Parser"))
     )
+
+
 
 
 def run():
@@ -262,7 +292,10 @@ def run():
         
 
         # print("\n\n\n\n", final_data)
-        print(f"\n\n\n\nBOT : {answer}")
+        print(f"\n\n\n\nBOT : {answer.content}")
+
+        # for i in answer:
+        #     print (i.content)
 
         chat_history.append((question, answer))
 

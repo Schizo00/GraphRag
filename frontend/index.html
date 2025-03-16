@@ -60,6 +60,30 @@
         }
         .user { background: #12C6EB; color: white; align-self: flex-end; }
         .bot { background: #f1f1f1; color: black; align-self: flex-start; }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            background: #f1f1f1;
+            color: #999;
+            align-self: flex-start;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-style: italic;
+        }
+        .loading-spinner {
+            border: 4px solid #f1f1f1;
+            border-top: 4px solid #12C6EB;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         #chat-input-container {
             display: flex;
             padding: 10px;
@@ -122,12 +146,20 @@
             chatHistory.push([userMessage, ""]);
             displayMessages();
             chatInput.value = "";
+            showLoadingMessage();
             getBotResponse(userMessage);
+        }
+
+        function showLoadingMessage() {
+            chatMessages.innerHTML += `<div class="message loading">
+                <div class="loading-spinner"></div> Retrieving information...
+            </div>`;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function getBotResponse(userMessage) {
             let history = chatHistory.map(([q, a]) => ({ question: q, answer: a }));
-            fetch("http://0.0.0.0:8000/chat", {
+            fetch("http://localhost:8000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question: userMessage, history: history })

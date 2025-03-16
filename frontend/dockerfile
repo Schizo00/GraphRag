@@ -3,7 +3,7 @@ FROM nginx:alpine
 
 WORKDIR /frontend
 # Copy your static files into the Nginx default directory
-COPY . .
+COPY . /usr/share/nginx/html/
 
 # Expose port 80 (the default Nginx port)
 EXPOSE 80

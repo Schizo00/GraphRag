@@ -16,8 +16,7 @@ services:
       neo4j:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/ping || exit 1"]
       timeout: 5s
       retries: 10
       start_period: 10s
@@ -31,6 +30,11 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:80 || exit 1"]
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
  
   neo4j:
@@ -41,15 +45,23 @@ services:
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=neo4j/password
-      - NEO4JLABS_PLUGINS=["apoc"]
+      - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       - NEO4J_dbms_security_procedures_allowlist=apoc.*
-      - NEO4J_dbms_jvm_additional="--add-modules jdk.incubator.vector"
+      # - NEO4J_dbms_jvm_additional="--add-modules jdk.incubator.vector"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_conf:/conf
     healthcheck:
       test: perl -MIO::Socket::INET -e 'exit(! defined( IO::Socket::INET->new("localhost:7687")))'
-      interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_conf:
 
 
