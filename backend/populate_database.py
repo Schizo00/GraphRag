@@ -9,6 +9,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from entity import Entity
 
+import re
 import time
 from tqdm_loggable.auto import tqdm
 import json
@@ -47,6 +48,18 @@ def get_llm_transformer(llm):
 
     return llm_transformer
 
+
+def replace_company_names(text):
+    companies = [
+    "Lolc Technologies Limited",
+    "Lolc Technologies",
+    "Lanka Orix Information Technology Services Limited",
+    "Lolc Technology Limited",
+    "Lolc Technology Services Ltd"
+]
+    pattern = re.compile(r'\b(?:' + '|'.join(re.escape(name) for name in companies) + r')\b', re.IGNORECASE)
+    return pattern.sub(companies[0], text)
+
 def load_data_from_docs(config):
     DATA_SOURCE = config['DATA']
 
@@ -56,7 +69,14 @@ def load_data_from_docs(config):
         if i.endswith(".md"):
             loader = UnstructuredMarkdownLoader(f"{DATA_SOURCE}/{i}")
             data = loader.load()
-            raw_documents.append(data[0])
+            # print("DOCS TYPE: ", data)
+
+            for doc in data:
+                doc.page_content = replace_company_names(doc.page_content)
+
+            raw_documents.extend(data)
+
+            # raw_documents.append(data[0])
 
     return raw_documents
 

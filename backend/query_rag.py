@@ -72,7 +72,7 @@ def get_prompt():
             ),
             (
                 "human",
-                "Use the given format to extract information from the following "
+                "Use the given format to extract information from the following."
                 "input: {question}",
             ),
         ]
@@ -120,7 +120,7 @@ def structured_retriever(question: str, entity_chain, graph) -> str:
             MATCH (node)<-[r:!MENTIONS]-(neighbor)
             RETURN neighbor.id + ' - ' + type(r) + ' -> ' + node.id AS output
         }
-        RETURN output LIMIT 25
+        RETURN output
         """
         
         response = graph.query(query, {"queries": entity_queries})
@@ -142,13 +142,14 @@ def async_retriever(question: str, vector_index, entity_chain, graph):
     # structured_data, unstructured_data = await asyncio.gather(structured_task, unstructured_task)
 
     start_time = time.time()
-    structured_data = structured_retriever(question, entity_chain, graph)
+    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
+    print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
+    structured_data = structured_retriever(question + str(unstructured_data), entity_chain, graph)
     print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
 
     # unstructured_data = await unstructured_task
-    start_time = time.time()
-    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
-    print("STRUCTURED_RETRIEVER: --- %s seconds ---" % (time.time() - start_time))
 
     # structured_data = structured_retriever(question, entity_chain, graph)
     # unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
@@ -159,6 +160,8 @@ def async_retriever(question: str, vector_index, entity_chain, graph):
     Unstructured data:
     {"#Document ".join(unstructured_data)}
     """
+
+    print(final_data)
     return final_data
 
 def retriever(question: str, vector_index, entity_chain, graph):
